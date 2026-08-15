@@ -296,6 +296,18 @@
       });
       chip.appendChild(chatBtn);
 
+      const giftBtn = el('button', '', '🎁');
+      giftBtn.title = room.giftHidden ? '显示礼物栏' : '隐藏礼物栏（画面扩展）';
+      giftBtn.style.opacity = room.giftHidden ? '0.55' : '1';
+      giftBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        try {
+          const r = await api.toggleGift(room.roomId);
+          if (!ok(r)) toast(errText(r));
+        } catch (err) { toast(errText(null, err), 'error'); }
+      });
+      chip.appendChild(giftBtn);
+
       const closeBtn = el('button', '', '✕');
       closeBtn.title = '关闭';
       closeBtn.addEventListener('click', async (e) => {

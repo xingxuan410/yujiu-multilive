@@ -4,6 +4,19 @@ const path = require('node:path');
 const { computeRects, SIDEBAR_W } = require('./layout');
 const { log } = require('./applog');
 
+// 礼物框开关 CSS：hide 时移除礼物框，并把直播画面/评论区扩展占满原礼物区域
+const GIFT_HIDE_CSS = `
+.gift-control-section, [class*="gift-control-section"], [class*="gift-menu-root"], [class*="gift-panel"] { display: none !important; }
+.live-room-app { height: 100vh !important; }
+.live-room-app .app-content { height: 100% !important; box-sizing: border-box !important; }
+.live-room-app .app-body { height: 100% !important; box-sizing: border-box !important; }
+.live-room-app .player-and-aside-area { height: 100% !important; box-sizing: border-box !important; }
+.live-room-app .player-ctnr { height: 100% !important; box-sizing: border-box !important; }
+.live-room-app .aside-area { height: 100% !important; box-sizing: border-box !important; }
+.live-room-app .player-ctnr video, .live-room-app .live-player-ctnr video, .live-room-app .live-player-mounter video { width: 100% !important; height: 100% !important; object-fit: fill !important; }
+.live-room-app .live-player-ctnr, .live-room-app .live-player-mounter { width: 100% !important; height: 100% !important; }
+`;
+
 class Viewer {
   constructor(win, opts = {}) {
     this.win = win;
@@ -151,6 +164,7 @@ class Viewer {
         cached.chatAutoTries = 0;
         setTimeout(() => this._autoCollapseChat(roomId), 50);
       }
+      setTimeout(() => this._autoHideGift(roomId), 400); // 默认自动隐藏礼物框（可点 🎁 打开）
       log('ROOM', '复用缓存视图（秒开）:', roomId);
       return { alreadyOpen: false, cached: true };
     }
@@ -158,9 +172,10 @@ class Viewer {
     const wc = view.webContents;
     const muted = opts.unmute ? false : this.rooms.size > 0;
     wc.setAudioMuted(muted);
-    this.rooms.set(roomId, { view, muted, webFullscreen: false, fsProbed: false, chatHidden: false, chatUserToggled: false });
+    this.rooms.set(roomId, { view, muted, webFullscreen: false, fsProbed: false, chatHidden: false, chatUserToggled: false, giftHidden: false });
     if (!this.overlay) this.win.contentView.addChildView(view);
     wc.loadURL(`https://live.bilibili.com/${roomId}`);
+    setTimeout(() => this._autoHideGift(roomId), 800); // 默认自动隐藏礼物框（可点 🎁 打开）
     this.layout();
     log('ROOM', 'openRoom 完成:', roomId, 'muted=', muted);
     return { alreadyOpen: false, muted };
@@ -243,7 +258,7 @@ class Viewer {
       const view = this._createView(roomId);
       const wc = view.webContents;
       wc.setAudioMuted(true);
-      const rec = { view, muted: true, webFullscreen: false, fsProbed: false, chatHidden: false, chatUserToggled: false, prewarmed: true, pauseTimers: [] };
+      const rec = { view, muted: true, webFullscreen: false, fsProbed: false, chatHidden: false, chatUserToggled: false, prewarmed: true, pauseTimers: [], giftHidden: false };
       this.pool.set(roomId, rec);
       wc.loadURL(`https://live.bilibili.com/${roomId}`);
       // 播放器起来后暂停视频，降低后台开销；仅当仍在池中才执行（被打开后取消）
@@ -691,6 +706,52 @@ class Viewer {
     return { chatHidden: r.chatHidden };
   }
 
+  // 礼物框开关：像评论区一样可以打开/关闭；关闭时画面与评论区扩展占满原礼物区域
+  async toggleGift(roomId) {
+    const r = this.rooms.get(String(roomId));
+    if (!r || r.view.webContents.isDestroyed()) return { giftHidden: null };
+    const hide = !r.giftHidden;
+    const js = hide
+      ? `(() => {
+          if (!document.getElementById('__app-gift-hide')) {
+            const s = document.createElement('style');
+            s.id = '__app-gift-hide';
+            s.textContent = ${JSON.stringify(GIFT_HIDE_CSS)};
+            (document.head || document.documentElement).appendChild(s);
+          }
+          const sels = ['.gift-control-section', '[class*="gift-control-section"]', '[class*="gift-menu-root"]', '[class*="gift-panel"]'];
+          for (const sel of sels) {
+            document.querySelectorAll(sel).forEach((el) => el.style.setProperty('display', 'none', 'important'));
+          }
+          return true;
+        })()`
+      : `(() => {
+          const el = document.getElementById('__app-gift-hide');
+          if (el) el.remove();
+          const sels = ['.gift-control-section', '[class*="gift-control-section"]', '[class*="gift-menu-root"]', '[class*="gift-panel"]'];
+          for (const sel of sels) {
+            document.querySelectorAll(sel).forEach((e) => e.style.removeProperty('display'));
+          }
+          return true;
+        })()`;
+    try {
+      await r.view.webContents.executeJavaScript(js, true);
+    } catch (e) {
+      log('VIEW', 'gift-toggle', roomId, '执行失败', String((e && e.message) || e));
+    }
+    r.giftHidden = hide;
+    log('ROOM', 'gift-toggle', roomId, hide ? '已隐藏' : '已显示');
+    this._notifyState(roomId);
+    return { giftHidden: r.giftHidden };
+  }
+
+  // 打开直播间后默认自动隐藏礼物框（和评论区自动收起保持一致，可点 🎁 再打开）
+  _autoHideGift(roomId) {
+    const r = this.rooms.get(String(roomId));
+    if (!r || r.giftHidden) return;
+    this.toggleGift(roomId).catch(() => {});
+  }
+
   closeRoom(roomId) {
     roomId = String(roomId);
     const r = this.rooms.get(roomId);
@@ -825,7 +886,7 @@ class Viewer {
   }
 
   snapshot() {
-    return [...this.rooms.entries()].map(([roomId, r]) => ({ roomId, muted: r.muted, chatHidden: r.chatHidden }));
+    return [...this.rooms.entries()].map(([roomId, r]) => ({ roomId, muted: r.muted, chatHidden: r.chatHidden, giftHidden: !!r.giftHidden }));
   }
 
   destroyAll() {

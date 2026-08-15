@@ -220,6 +220,11 @@ if (isSmoke) {
         broadcastRooms();
         return r;
       });
+      handle('room:toggle-gift', async (roomId) => {
+        const r = await viewer.toggleGift(String(roomId));
+        broadcastRooms();
+        return r;
+      });
       handle('room:focus', (roomId) => { viewer.focusRoom(String(roomId)); return {}; });
       handle('ui:overlay', (show) => { viewer.setOverlay(!!show); return {}; });
       handle('notify:test', () => {

@@ -15,6 +15,7 @@ contextBridge.exposeInMainWorld('api', {
   closeRoom: (roomId) => ipcRenderer.invoke('room:close', roomId),
   setMute: (p) => ipcRenderer.invoke('room:mute', p),
   toggleChat: (roomId) => ipcRenderer.invoke('room:toggle-chat', roomId),
+  toggleGift: (roomId) => ipcRenderer.invoke('room:toggle-gift', roomId),
   focusRoom: (roomId) => ipcRenderer.invoke('room:focus', roomId),
   onRooms: (cb) => { const h = (_e, list) => cb(list); ipcRenderer.on('rooms:change', h); return () => ipcRenderer.removeListener('rooms:change', h); },
   onActiveRoom: (cb) => { const h = (_e, rid) => cb(rid); ipcRenderer.on('rooms:active', h); return () => ipcRenderer.removeListener('rooms:active', h); },
