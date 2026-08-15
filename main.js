@@ -18,21 +18,22 @@ const isTestChat = process.argv.includes('--test-chat');
 if (process.argv.includes('--no-gpu')) app.disableHardwareAcceleration();
 app.setAppUserModelId('com.local.bilimultilive');
 
-// 数据目录重定向到应用目录内（避免 AppData 权限问题，应用可移植）
+// 数据目录：开发模式在项目目录内；打包后的便携版在 exe 旁边（可写）
+const portableDataRoot = app.isPackaged ? path.dirname(process.execPath) : __dirname;
 if (isSmoke) {
   app.setPath('userData', path.join(__dirname, 'smoke-profile'));
 } else if (isDiag) {
   // 诊断模式：使用真实资料目录（登录会话），避免匿名会话触发 B 站风控验证码
-  app.setPath('userData', process.env.BILI_MULTILIVE_DATA || path.join(__dirname, 'data'));
+  app.setPath('userData', process.env.BILI_MULTILIVE_DATA || path.join(portableDataRoot, 'data'));
 } else if (isTestOpen || isTestClick || isTestChat) {
   // 自测模式：使用 data 的副本（带登录 Cookie 避开验证码，又不与正在运行的应用抢 profile 锁）
   const tdir = process.env.BILI_MULTILIVE_DATA || path.join(__dirname, 'test-data');
   try {
-    if (!fs.existsSync(tdir)) fs.cpSync(path.join(__dirname, 'data'), tdir, { recursive: true });
+    if (!fs.existsSync(tdir)) fs.cpSync(path.join(portableDataRoot, 'data'), tdir, { recursive: true });
   } catch (e) { console.error('TEST: profile 副本失败', e); }
   app.setPath('userData', tdir);
 } else {
-  app.setPath('userData', process.env.BILI_MULTILIVE_DATA || path.join(__dirname, 'data'));
+  app.setPath('userData', process.env.BILI_MULTILIVE_DATA || path.join(portableDataRoot, 'data'));
 }
 
 // 日志：所有错误写入 data/app.log，便于排查
