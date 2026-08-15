@@ -34,33 +34,40 @@ function createProgressWindow() {
   });
   const html = `<!doctype html><html><head><meta charset="utf-8"><style>
     body{font-family:system-ui,"Microsoft YaHei",sans-serif;background:rgba(30,30,38,.96);color:#e8e8ef;border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:16px;margin:0;user-select:none}
-    .t{font-size:14px;margin-bottom:10px}
+    .t{font-size:14px;margin-bottom:6px}
+    #mirror{font-size:12px;color:#fb7299;margin-bottom:10px}
     .bar{height:8px;background:rgba(255,255,255,.12);border-radius:4px;overflow:hidden}
     #fill{height:100%;width:0;background:#fb7299;border-radius:4px;transition:width .2s}
     #pct{font-size:12px;color:#9a9aa8;margin-top:6px}
   </style></head><body>
     <div class="t">正在下载更新…</div>
+    <div id="mirror">准备中…</div>
     <div class="bar"><div id="fill"></div></div>
-    <div id="pct">准备中…</div>
+    <div id="pct">0 KB / 0 KB</div>
     <script>
-      window.setProgress = function(p, doneMB) {
-        document.getElementById('fill').style.width = (p * 100).toFixed(1) + '%';
-        document.getElementById('pct').textContent = (p === null ? '下载中…' : (p * 100).toFixed(1) + '%') + (doneMB != null ? '（' + doneMB + ' MB）' : '');
+      window.setProgress = function(p, doneKB, totalKB, mirror) {
+        document.getElementById('fill').style.width = (p === null ? 0 : p * 100).toFixed(1) + '%';
+        if (mirror) document.getElementById('mirror').textContent = mirror;
+        if (doneKB != null) {
+          document.getElementById('pct').textContent = doneKB + ' KB / ' + (totalKB != null ? totalKB + ' KB' : '? KB') + (p != null ? '（' + (p * 100).toFixed(1) + '%）' : '');
+        }
       };
     </script></body></html>`;
   win.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html));
   return win;
 }
 
-function updateProgress(win, pct, doneMB) {
+function updateProgress(win, pct, doneBytes, totalBytes, mirror) {
   try {
     if (win && !win.isDestroyed()) {
-      win.webContents.executeJavaScript(`window.setProgress(${pct === null ? 'null' : pct}, ${doneMB == null ? 'null' : doneMB})`);
+      const doneKB = doneBytes == null ? null : Math.round(doneBytes / 1024);
+      const totalKB = totalBytes == null ? null : Math.round(totalBytes / 1024);
+      win.webContents.executeJavaScript(`window.setProgress(${pct === null ? 'null' : pct}, ${doneKB == null ? 'null' : doneKB}, ${totalKB == null ? 'null' : totalKB}, ${JSON.stringify(mirror || '')})`);
     }
   } catch (_) {}
 }
 
-async function downloadToFile(url, dest, win, totalBytes) {
+async function downloadToFile(url, dest, win, totalBytes, mirror) {
   const res = await fetch(url, { headers: { 'User-Agent': 'yujiu-ultilive' } });
   if (!res.ok) throw new Error('HTTP ' + res.status);
   const contentLength = Number(res.headers.get('content-length')) || totalBytes || 0;
@@ -73,11 +80,11 @@ async function downloadToFile(url, dest, win, totalBytes) {
     const pct = contentLength ? Math.min(1, done / contentLength) : null;
     if (pct === null || Math.floor(pct * 50) !== lastPct) {
       lastPct = pct === null ? 0 : Math.floor(pct * 50);
-      updateProgress(win, pct, Math.round(done / 1024 / 1024));
+      updateProgress(win, pct, done, contentLength, mirror);
     }
   });
   await pipeline(reader, out);
-  updateProgress(win, 1, Math.round(done / 1024 / 1024));
+  updateProgress(win, 1, done, contentLength, mirror);
 }
 
 async function downloadUpdate(rel, mainWin) {
@@ -112,17 +119,19 @@ async function downloadUpdate(rel, mainWin) {
   });
   try {
     log('UPDATE', '开始下载', asset.name, asset.size || 'unknown', asset.browser_download_url);
-    const urls = [asset.browser_download_url, ...DOWNLOAD_PROXIES.map((p) => p + asset.browser_download_url)];
+    const sources = [{ label: '直连 GitHub', url: asset.browser_download_url }];
+    const proxyLabels = ['ghfast 镜像', 'gh-proxy 镜像', 'ghproxy.net 镜像'];
+    DOWNLOAD_PROXIES.forEach((p, i) => sources.push({ label: proxyLabels[i] || '代理镜像', url: p + asset.browser_download_url }));
     let lastErr = null;
-    for (let i = 0; i < urls.length; i++) {
+    for (let i = 0; i < sources.length; i++) {
       try {
-        updateProgress(win, null, null);
-        await downloadToFile(urls[i], dest, win, asset.size);
+        updateProgress(win, null, 0, asset.size || 0, '正在连接：' + sources[i].label);
+        await downloadToFile(sources[i].url, dest, win, asset.size, sources[i].label);
         lastErr = null;
         break;
       } catch (e) {
         lastErr = e;
-        log('UPDATE', '下载源失败，尝试下一个', i + 1 + '/' + urls.length, urls[i], String((e && e.message) || e));
+        log('UPDATE', '下载源失败，尝试下一个', i + 1 + '/' + sources.length, sources[i].url, String((e && e.message) || e));
       }
     }
     if (lastErr) throw lastErr;
