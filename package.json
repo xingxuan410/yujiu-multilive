@@ -1,7 +1,7 @@
 {
-  "name": "bili-multilive",
+  "name": "yujiu-ultilive",
   "productName": "宇宙人的监控室",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "B站开播监测 + 右下角弹窗通知 + 同窗口多直播间自适应网格观看",
   "main": "main.js",
   "scripts": {
@@ -32,6 +32,7 @@
     ],
     "win": {
       "icon": "resource/icon.ico",
+      "artifactName": "yujiu-ultilive-${version}-portable.${ext}",
       "target": [
         {
           "target": "portable",
