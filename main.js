@@ -193,6 +193,9 @@ if (isSmoke) {
           name: String(p.name || '').trim() || `房间${roomId}`,
           groupId: p.groupId || null,
         });
+        // 修复尝试：新增后立即刷新开播状态并补位预热池，避免需要重启才能正常观看
+        try { if (poller) poller.pollNow(); } catch (_) {}
+        try { refillPool(); } catch (_) {}
         return { streamer };
       });
       handle('streamer:remove', (id) => { store.removeStreamer(id); return {}; });
