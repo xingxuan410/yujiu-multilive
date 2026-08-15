@@ -4,7 +4,8 @@ const path = require('node:path');
 const { computeRects, SIDEBAR_W } = require('./layout');
 const { log } = require('./applog');
 
-// 礼物框开关 CSS：hide 时移除礼物框，并把直播画面/评论区扩展占满原礼物区域
+// 礼物框开关 CSS：hide 时移除礼物框，并把直播画面/评论区扩展占满原礼物区域。
+// 注意：不强制拉伸 video，保持页面原有的固定画面比例（0.1.1 行为）。
 const GIFT_HIDE_CSS = `
 .gift-control-section, [class*="gift-control-section"], [class*="gift-menu-root"], [class*="gift-panel"] { display: none !important; }
 .live-room-app { height: 100vh !important; }
@@ -13,8 +14,6 @@ const GIFT_HIDE_CSS = `
 .live-room-app .player-and-aside-area { height: 100% !important; box-sizing: border-box !important; }
 .live-room-app .player-ctnr { height: 100% !important; box-sizing: border-box !important; }
 .live-room-app .aside-area { height: 100% !important; box-sizing: border-box !important; }
-.live-room-app .player-ctnr video, .live-room-app .live-player-ctnr video, .live-room-app .live-player-mounter video { width: 100% !important; height: 100% !important; object-fit: fill !important; }
-.live-room-app .live-player-ctnr, .live-room-app .live-player-mounter { width: 100% !important; height: 100% !important; }
 `;
 
 class Viewer {
