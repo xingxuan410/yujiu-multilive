@@ -7,7 +7,14 @@ const { Readable } = require('node:stream');
 const { pipeline } = require('node:stream/promises');
 const { log } = require('./applog');
 
-const REPO_API = 'https://api.github.com/repos/xingxuan410/yujiu-multilive/releases/latest';
+const REPO_API_DIRECT = 'https://api.github.com/repos/xingxuan410/yujiu-multilive/releases/latest';
+const API_URLS = [
+  REPO_API_DIRECT,
+  'https://ghfast.top/' + REPO_API_DIRECT,
+  'https://gh-proxy.com/' + REPO_API_DIRECT,
+  'https://ghproxy.net/' + REPO_API_DIRECT,
+];
+const DOWNLOAD_PROXIES = ['https://ghfast.top/', 'https://gh-proxy.com/', 'https://ghproxy.net/'];
 
 function compareVersions(a, b) {
   const pa = String(a || '').replace(/^v/i, '').split('.').map((x) => parseInt(x || '0', 10));
@@ -105,13 +112,20 @@ async function downloadUpdate(rel, mainWin) {
   });
   try {
     log('UPDATE', '开始下载', asset.name, asset.size || 'unknown', asset.browser_download_url);
-    try {
-      await downloadToFile(asset.browser_download_url, dest, win, asset.size);
-    } catch (e) {
-      log('UPDATE', '直连下载失败，切换代理重试', String((e && e.message) || e));
-      updateProgress(win, null, null);
-      await downloadToFile('https://ghfast.top/' + asset.browser_download_url, dest, win, asset.size);
+    const urls = [asset.browser_download_url, ...DOWNLOAD_PROXIES.map((p) => p + asset.browser_download_url)];
+    let lastErr = null;
+    for (let i = 0; i < urls.length; i++) {
+      try {
+        updateProgress(win, null, null);
+        await downloadToFile(urls[i], dest, win, asset.size);
+        lastErr = null;
+        break;
+      } catch (e) {
+        lastErr = e;
+        log('UPDATE', '下载源失败，尝试下一个', i + 1 + '/' + urls.length, urls[i], String((e && e.message) || e));
+      }
     }
+    if (lastErr) throw lastErr;
     log('UPDATE', '下载完成', dest);
     if (!win.isDestroyed()) win.close();
     const { response } = await dialog.showMessageBox(mainWin, {
@@ -144,11 +158,16 @@ async function downloadUpdate(rel, mainWin) {
 
 async function checkUpdate(mainWin) {
   try {
-    const res = await fetch(REPO_API, {
-      headers: { 'User-Agent': 'yujiu-ultilive', Accept: 'application/vnd.github+json' },
-    });
-    if (!res.ok) return;
-    const rel = await res.json();
+    let rel = null;
+    for (const url of API_URLS) {
+      try {
+        const res = await fetch(url, {
+          headers: { 'User-Agent': 'yujiu-ultilive', Accept: 'application/vnd.github+json' },
+        });
+        if (res.ok) { rel = await res.json(); break; }
+      } catch (_) { /* 换下一个镜像 */ }
+    }
+    if (!rel) return;
     const latest = String(rel.tag_name || '').replace(/^v/i, '');
     const current = app.getVersion();
     if (!latest || compareVersions(latest, current) <= 0) return;
