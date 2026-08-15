@@ -1,0 +1,49 @@
+{
+  "name": "bili-multilive",
+  "productName": "宇宙人的监控室",
+  "version": "0.1.0",
+  "description": "B站开播监测 + 右下角弹窗通知 + 同窗口多直播间自适应网格观看",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "smoke": "electron . --smoke",
+    "smoke:headless": "node modules/smoke-headless.js",
+    "diag": "electron . --diag",
+    "dist": "electron-builder --win portable"
+  },
+  "license": "CC-BY-NC-4.0",
+  "author": "宇宙人的监控室",
+  "build": {
+    "appId": "com.local.bilimultilive",
+    "productName": "宇宙人的监控室",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "room-preload.js",
+      "modules/**/*",
+      "renderer/**/*",
+      "popup/**/*",
+      "default-data.json",
+      "resource/**/*",
+      "package.json"
+    ],
+    "win": {
+      "icon": "resource/icon.ico",
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    }
+  },
+  "devDependencies": {
+    "electron": "^33.4.11",
+    "electron-builder": "^26.15.3"
+  }
+}

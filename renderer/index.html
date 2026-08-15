@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' https: data:; style-src 'self' 'unsafe-inline'; script-src 'self'">
+  <title>宇宙人的监控室</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+    <aside id="sidebar">
+      <div id="header">
+        <div class="title">宇宙人的监控室</div>
+        <div class="subtitle">开播通知 · 多开观看</div>
+        <button id="btn-toggle-sidebar" class="side-toggle" title="收起/展开侧边栏">«</button>
+        <div id="collapsed-actions">
+          <button id="btn-ca-chat" class="ca-btn" title="展开/收起评论栏">💬</button>
+        </div>
+      </div>
+      <div class="actions">
+        <button id="btn-add-streamer" class="btn primary">＋ 添加主播</button>
+        <button id="btn-open-all" class="btn ghost">▶ 全部直播</button>
+      </div>
+      <div id="rooms-panel" hidden>
+        <h3><span>正在观看</span><button id="btn-toggle-rooms" class="fold-btn" title="折叠/展开">▾</button></h3>
+        <div id="rooms-chips"></div>
+      </div>
+      <div id="groups-panel">
+        <div class="panel-head">
+          <h3>关注分组</h3>
+          <button id="btn-add-group" class="btn ghost sm">＋分组</button>
+        </div>
+        <div id="groups-list"></div>
+      </div>
+      <footer id="footer">
+        <button id="btn-settings" class="btn ghost sm">⚙ 设置</button>
+        <span id="stat"></span>
+      </footer>
+    </aside>
+    <main id="stage">
+      <div class="empty">
+        <div class="empty-icon">▶</div>
+        <div class="empty-title">从左侧选择主播打开直播间</div>
+        <div class="empty-sub">主播开播时右下角会自动弹出通知</div>
+      </div>
+    </main>
+  </div>
+  <div id="modal-root"></div>
+  <div id="toast-root"></div>
+  <script src="app.js" defer></script>
+</body>
+</html>

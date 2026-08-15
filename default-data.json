@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "groups": [
+    { "id": "29a0c283-7b4c-400a-b787-08e58028e059", "name": "VR28期" },
+    { "id": "637288fc-58d3-4ef9-ba8f-3b01fc1c10ab", "name": "277小队" }
+  ],
+  "streamers": [
+    { "id": "862d8d0f-8ee8-419c-ba08-aa7cb01cd321", "roomId": "1727071052", "name": "小松绿", "groupId": "29a0c283-7b4c-400a-b787-08e58028e059", "isLive": false, "liveStatus": 0, "liveTitle": "", "cover": "", "areaName": "", "uname": "", "liveStartTime": null, "notified": false, "addedAt": 0 },
+    { "id": "081201cb-8e44-4d65-9ada-d62200981593", "roomId": "1727074031", "name": "羽啾", "groupId": "29a0c283-7b4c-400a-b787-08e58028e059", "isLive": false, "liveStatus": 0, "liveTitle": "", "cover": "", "areaName": "", "uname": "", "liveStartTime": null, "notified": false, "addedAt": 0 },
+    { "id": "0841f79c-5157-4515-877a-de6d7bdbeff9", "roomId": "1727076670", "name": "枝堇", "groupId": "29a0c283-7b4c-400a-b787-08e58028e059", "isLive": false, "liveStatus": 0, "liveTitle": "", "cover": "", "areaName": "", "uname": "", "liveStartTime": null, "notified": false, "addedAt": 0 },
+    { "id": "9a28c907-1ed0-42a9-937f-9cbc50a7c00f", "roomId": "1700301235", "name": "四时小路", "groupId": "29a0c283-7b4c-400a-b787-08e58028e059", "isLive": false, "liveStatus": 0, "liveTitle": "", "cover": "", "areaName": "", "uname": "", "liveStartTime": null, "notified": false, "addedAt": 0 },
+    { "id": "b6c454b9-0f7b-4a6b-9b55-a8bd5597ce0a", "roomId": "30655190", "name": "弥月Mizuki", "groupId": "637288fc-58d3-4ef9-ba8f-3b01fc1c10ab", "isLive": false, "liveStatus": 0, "liveTitle": "", "cover": "", "areaName": "", "uname": "", "liveStartTime": null, "notified": false, "addedAt": 0 },
+    { "id": "6eaec784-0c58-40d6-91ba-c9311e278d67", "roomId": "1713546334", "name": "灰泽满", "groupId": "637288fc-58d3-4ef9-ba8f-3b01fc1c10ab", "isLive": false, "liveStatus": 0, "liveTitle": "", "cover": "", "areaName": "", "uname": "", "liveStartTime": null, "notified": false, "addedAt": 0 },
+    { "id": "1002bbb2-b2cb-4b2e-9484-b80ec511749b", "roomId": "1713548468", "name": "莉蔻", "groupId": "637288fc-58d3-4ef9-ba8f-3b01fc1c10ab", "isLive": false, "liveStatus": 0, "liveTitle": "", "cover": "", "areaName": "", "uname": "", "liveStartTime": null, "notified": false, "addedAt": 0 },
+    { "id": "c491a8c2-be9f-4953-9a34-dca81ce49800", "roomId": "26966466", "name": "栞栞", "groupId": null, "isLive": false, "liveStatus": 0, "liveTitle": "", "cover": "", "areaName": "", "uname": "", "liveStartTime": null, "notified": false, "addedAt": 0 },
+    { "id": "daa677e6-3b73-4aa6-b583-ead7644fa6e4", "roomId": "1741667419", "name": "十六萤", "groupId": "637288fc-58d3-4ef9-ba8f-3b01fc1c10ab", "isLive": false, "liveStatus": 0, "liveTitle": "", "cover": "", "areaName": "", "uname": "", "liveStartTime": null, "notified": false, "addedAt": 0 },
+    { "id": "78b7729a-ec49-40f5-86a9-003868b682be", "roomId": "1986461465", "name": "克罗雅", "groupId": "637288fc-58d3-4ef9-ba8f-3b01fc1c10ab", "isLive": false, "liveStatus": 0, "liveTitle": "", "cover": "", "areaName": "", "uname": "", "liveStartTime": null, "notified": false, "addedAt": 0 }
+  ],
+  "recentRoomIds": [],
+  "settings": {
+    "pollIntervalSec": 60,
+    "popupDurationSec": 10,
+    "systemNotification": false,
+    "sidebarCollapsed": false,
+    "enableNotify": true,
+    "minimizeToTray": false,
+    "prewarmOnStartup": true,
+    "roomsPanelCollapsed": false,
+    "collapsedGroups": []
+  }
+}
