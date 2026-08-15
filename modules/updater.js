@@ -1,8 +1,10 @@
-// modules/updater.js —— GitHub Release 更新检查：发现新版本弹窗，点击“更新”自动下载新版便携版 exe
+// modules/updater.js —— GitHub Release 更新检查：发现新版本弹窗，点击“更新”直接下载并显示进度
 'use strict';
-const { app, dialog, shell } = require('electron');
+const { app, dialog, shell, BrowserWindow } = require('electron');
 const fs = require('node:fs');
 const path = require('node:path');
+const { Readable } = require('node:stream');
+const { pipeline } = require('node:stream/promises');
 const { log } = require('./applog');
 
 const REPO_API = 'https://api.github.com/repos/xingxuan410/yujiu-multilive/releases/latest';
@@ -17,18 +19,58 @@ function compareVersions(a, b) {
   return 0;
 }
 
-async function fetchBytes(url) {
+function createProgressWindow() {
+  const win = new BrowserWindow({
+    width: 380, height: 120, frame: false, transparent: true, resizable: false,
+    alwaysOnTop: true, skipTaskbar: true, hasShadow: false, show: false,
+    webPreferences: { contextIsolation: true, sandbox: true },
+  });
+  const html = `<!doctype html><html><head><meta charset="utf-8"><style>
+    body{font-family:system-ui,"Microsoft YaHei",sans-serif;background:rgba(30,30,38,.96);color:#e8e8ef;border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:16px;margin:0;user-select:none}
+    .t{font-size:14px;margin-bottom:10px}
+    .bar{height:8px;background:rgba(255,255,255,.12);border-radius:4px;overflow:hidden}
+    #fill{height:100%;width:0;background:#fb7299;border-radius:4px;transition:width .2s}
+    #pct{font-size:12px;color:#9a9aa8;margin-top:6px}
+  </style></head><body>
+    <div class="t">正在下载更新…</div>
+    <div class="bar"><div id="fill"></div></div>
+    <div id="pct">准备中…</div>
+    <script>
+      window.setProgress = function(p, doneMB) {
+        document.getElementById('fill').style.width = (p * 100).toFixed(1) + '%';
+        document.getElementById('pct').textContent = (p === null ? '下载中…' : (p * 100).toFixed(1) + '%') + (doneMB != null ? '（' + doneMB + ' MB）' : '');
+      };
+    </script></body></html>`;
+  win.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html));
+  return win;
+}
+
+function updateProgress(win, pct, doneMB) {
   try {
-    const res = await fetch(url, { headers: { 'User-Agent': 'yujiu-ultilive' } });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    return Buffer.from(await res.arrayBuffer());
-  } catch (e) {
-    log('UPDATE', '直连下载失败，尝试代理', url, String((e && e.message) || e));
-    const proxied = 'https://ghfast.top/' + url;
-    const res = await fetch(proxied, { headers: { 'User-Agent': 'yujiu-ultilive' } });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    return Buffer.from(await res.arrayBuffer());
-  }
+    if (win && !win.isDestroyed()) {
+      win.webContents.executeJavaScript(`window.setProgress(${pct === null ? 'null' : pct}, ${doneMB == null ? 'null' : doneMB})`);
+    }
+  } catch (_) {}
+}
+
+async function downloadToFile(url, dest, win, totalBytes) {
+  const res = await fetch(url, { headers: { 'User-Agent': 'yujiu-ultilive' } });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const contentLength = Number(res.headers.get('content-length')) || totalBytes || 0;
+  const reader = Readable.fromWeb(res.body);
+  const out = fs.createWriteStream(dest);
+  let done = 0;
+  let lastPct = -1;
+  reader.on('data', (chunk) => {
+    done += chunk.length;
+    const pct = contentLength ? Math.min(1, done / contentLength) : null;
+    if (pct === null || Math.floor(pct * 50) !== lastPct) {
+      lastPct = pct === null ? 0 : Math.floor(pct * 50);
+      updateProgress(win, pct, Math.round(done / 1024 / 1024));
+    }
+  });
+  await pipeline(reader, out);
+  updateProgress(win, 1, Math.round(done / 1024 / 1024));
 }
 
 async function downloadUpdate(rel, mainWin) {
@@ -51,11 +93,27 @@ async function downloadUpdate(rel, mainWin) {
     ? (process.env.PORTABLE_EXECUTABLE_DIR || path.dirname(process.execPath))
     : path.dirname(process.execPath);
   const dest = path.join(exeDir, asset.name);
+  const win = createProgressWindow();
+  win.once('ready-to-show', () => {
+    if (!win.isDestroyed()) win.showInactive();
+    // 屏幕右下角显示
+    try {
+      const { screen } = require('electron');
+      const wa = screen.getPrimaryDisplay().workArea;
+      win.setPosition(wa.x + wa.width - 400, wa.y + wa.height - 140);
+    } catch (_) {}
+  });
   try {
     log('UPDATE', '开始下载', asset.name, asset.size || 'unknown', asset.browser_download_url);
-    const buf = await fetchBytes(asset.browser_download_url);
-    fs.writeFileSync(dest, buf);
-    log('UPDATE', '下载完成', dest, buf.length + ' bytes');
+    try {
+      await downloadToFile(asset.browser_download_url, dest, win, asset.size);
+    } catch (e) {
+      log('UPDATE', '直连下载失败，切换代理重试', String((e && e.message) || e));
+      updateProgress(win, null, null);
+      await downloadToFile('https://ghfast.top/' + asset.browser_download_url, dest, win, asset.size);
+    }
+    log('UPDATE', '下载完成', dest);
+    if (!win.isDestroyed()) win.close();
     const { response } = await dialog.showMessageBox(mainWin, {
       type: 'info',
       title: '新版本已下载',
@@ -69,7 +127,8 @@ async function downloadUpdate(rel, mainWin) {
     if (response === 0) shell.openPath(exeDir);
   } catch (e) {
     log('UPDATE', '下载失败', String((e && e.message) || e));
-    await dialog.showMessageBox(mainWin, {
+    if (!win.isDestroyed()) win.close();
+    const { response } = await dialog.showMessageBox(mainWin, {
       type: 'error',
       title: '下载失败',
       message: '自动下载失败',
@@ -78,7 +137,8 @@ async function downloadUpdate(rel, mainWin) {
       defaultId: 0,
       cancelId: 1,
       noLink: true,
-    }).then(({ response }) => { if (response === 0) shell.openExternal(rel.html_url); });
+    });
+    if (response === 0) shell.openExternal(rel.html_url);
   }
 }
 
@@ -97,7 +157,7 @@ async function checkUpdate(mainWin) {
       type: 'info',
       title: '发现新版本',
       message: `发现新版本 v${latest}（当前 v${current}）`,
-      detail: `${rel.name || ''}\n\n点击“更新”将自动下载新版便携版到当前目录。`,
+      detail: `${rel.name || ''}\n\n点击“更新”将直接下载新版便携版到当前目录（带进度显示）。`,
       buttons: ['更新', '忽略'],
       defaultId: 0,
       cancelId: 1,
