@@ -18,8 +18,11 @@ const isTestChat = process.argv.includes('--test-chat');
 if (process.argv.includes('--no-gpu')) app.disableHardwareAcceleration();
 app.setAppUserModelId('com.local.bilimultilive');
 
-// 数据目录：开发模式在项目目录内；打包后的便携版在 exe 旁边（可写）
-const portableDataRoot = app.isPackaged ? path.dirname(process.execPath) : __dirname;
+// 数据目录：开发模式在项目目录内；打包后的便携版放在你双击的 exe 旁边（electron-builder
+// 会解压到临时目录运行，只有 PORTABLE_EXECUTABLE_DIR 才指向 exe 真实位置，登录状态才能保存）
+const portableDataRoot = app.isPackaged
+  ? (process.env.PORTABLE_EXECUTABLE_DIR || path.dirname(process.execPath))
+  : __dirname;
 if (isSmoke) {
   app.setPath('userData', path.join(__dirname, 'smoke-profile'));
 } else if (isDiag) {
