@@ -20,6 +20,11 @@
     '[class*="Intro"]',
     '[class*="anchor-"]',
     '[class*="Anchor-"]',
+    // 礼物框：底部礼物栏与礼物弹层整体移除，画面/评论区扩展占满原礼物区域
+    '.gift-control-section',
+    '[class*="gift-control-section"]',
+    '[class*="gift-menu-root"]',
+    '[class*="gift-panel"]',
   ].join(',');
 
   const hide = function (el) {
@@ -91,7 +96,16 @@
     observer.__started = true;
     try {
       const s = document.createElement('style');
-      s.textContent = SELECTOR + ' { display: none !important; }';
+      // 1) 隐藏顶部站头/浮层/礼物框
+      // 2) 礼物框移除后，把直播画面与评论区扩展到原礼物区域（占满全高）
+      s.textContent = SELECTOR + ' { display: none !important; }\n' + [
+        '.live-room-app { height: 100vh !important; }',
+        '.live-room-app .app-content { height: 100% !important; box-sizing: border-box !important; }',
+        '.live-room-app .app-body { height: 100% !important; box-sizing: border-box !important; }',
+        '.live-room-app .player-and-aside-area { height: 100% !important; box-sizing: border-box !important; }',
+        '.live-room-app .player-ctnr { height: 100% !important; box-sizing: border-box !important; }',
+        '.live-room-app .aside-area { height: 100% !important; box-sizing: border-box !important; }',
+      ].join('\n');
       (document.head || document.documentElement).appendChild(s);
     } catch (_) {}
     try {
