@@ -34,7 +34,17 @@ async function fetchBytes(url) {
 async function downloadUpdate(rel, mainWin) {
   const asset = (rel.assets || []).find((a) => /portable\.exe$/i.test(a.name || ''));
   if (!asset) {
-    shell.openExternal(rel.html_url);
+    const { response } = await dialog.showMessageBox(mainWin, {
+      type: 'warning',
+      title: '暂无可下载的便携包',
+      message: '新版本已发布，但便携包还没上传完成',
+      detail: '请稍后重新启动应用再试。',
+      buttons: ['打开发布页面', '关闭'],
+      defaultId: 1,
+      cancelId: 1,
+      noLink: true,
+    });
+    if (response === 0) shell.openExternal(rel.html_url);
     return;
   }
   const exeDir = app.isPackaged
