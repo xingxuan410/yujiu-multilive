@@ -28,32 +28,11 @@ function compareVersions(a, b) {
 
 function createProgressWindow() {
   const win = new BrowserWindow({
-    width: 380, height: 120, frame: false, transparent: true, resizable: false,
+    width: 400, height: 140, frame: false, transparent: true, resizable: false,
     alwaysOnTop: true, skipTaskbar: true, hasShadow: false, show: false,
     webPreferences: { contextIsolation: true, sandbox: true },
   });
-  const html = `<!doctype html><html><head><meta charset="utf-8"><style>
-    body{font-family:system-ui,"Microsoft YaHei",sans-serif;background:rgba(30,30,38,.96);color:#e8e8ef;border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:16px;margin:0;user-select:none}
-    .t{font-size:14px;margin-bottom:6px}
-    #mirror{font-size:12px;color:#fb7299;margin-bottom:10px}
-    .bar{height:8px;background:rgba(255,255,255,.12);border-radius:4px;overflow:hidden}
-    #fill{height:100%;width:0;background:#fb7299;border-radius:4px;transition:width .2s}
-    #pct{font-size:12px;color:#9a9aa8;margin-top:6px}
-  </style></head><body>
-    <div class="t">正在下载更新…</div>
-    <div id="mirror">准备中…</div>
-    <div class="bar"><div id="fill"></div></div>
-    <div id="pct">0 KB / 0 KB</div>
-    <script>
-      window.setProgress = function(p, doneKB, totalKB, mirror) {
-        document.getElementById('fill').style.width = (p === null ? 0 : p * 100).toFixed(1) + '%';
-        if (mirror) document.getElementById('mirror').textContent = mirror;
-        if (doneKB != null) {
-          document.getElementById('pct').textContent = doneKB + ' KB / ' + (totalKB != null ? totalKB + ' KB' : '? KB') + (p != null ? '（' + (p * 100).toFixed(1) + '%）' : '');
-        }
-      };
-    </script></body></html>`;
-  win.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html));
+  win.loadFile(path.join(__dirname, '..', 'resource', 'update-progress.html'));
   return win;
 }
 

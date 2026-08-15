@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'">
+  <title>更新下载</title>
+  <style>
+    html, body {
+      margin: 0;
+      height: 100%;
+      background: transparent;
+      overflow: hidden;
+      user-select: none;
+    }
+    .card {
+      box-sizing: border-box;
+      width: 100%;
+      height: 100%;
+      padding: 16px;
+      background: #1e1e26;
+      color: #e8e8ef;
+      border: 1px solid rgba(255, 255, 255, .12);
+      border-radius: 12px;
+      font-family: system-ui, "Microsoft YaHei", sans-serif;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, .45);
+    }
+    .title {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+    #mirror {
+      font-size: 12px;
+      color: #fb7299;
+      margin-bottom: 10px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .bar {
+      height: 8px;
+      background: rgba(255, 255, 255, .12);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    #fill {
+      height: 100%;
+      width: 0;
+      background: #fb7299;
+      border-radius: 4px;
+      transition: width .2s;
+    }
+    #pct {
+      font-size: 12px;
+      color: #9a9aa8;
+      margin-top: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="title">正在下载更新…</div>
+    <div id="mirror">准备中…</div>
+    <div class="bar"><div id="fill"></div></div>
+    <div id="pct">0 KB / 0 KB</div>
+  </div>
+  <script>
+    window.setProgress = function (p, doneKB, totalKB, mirror) {
+      document.getElementById('fill').style.width = (p === null ? 0 : p * 100).toFixed(1) + '%';
+      if (mirror) document.getElementById('mirror').textContent = mirror;
+      if (doneKB != null) {
+        document.getElementById('pct').textContent =
+          doneKB + ' KB / ' + (totalKB != null ? totalKB + ' KB' : '? KB') +
+          (p != null ? '（' + (p * 100).toFixed(1) + '%）' : '');
+      }
+    };
+  </script>
+</body>
+</html>
