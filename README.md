@@ -29,7 +29,7 @@
 
 ## 🚀 快速开始
 
-**免安装版（推荐）**：到本仓库的 [Releases](../../releases) 页面下载 `BiliMultiLive-0.1.0-portable.exe`，双击即可运行，无需安装任何环境。数据保存在 exe 同目录的 `data\` 文件夹里。
+**免安装版（推荐）**：到本仓库的 [Releases](../../releases) 页面下载 `BiliMultiLive-0.1.1-portable.exe`，双击即可运行，无需安装任何环境。数据（含登录状态）保存在 exe 同目录的 `data\` 文件夹里。
 
 开发运行：
 
