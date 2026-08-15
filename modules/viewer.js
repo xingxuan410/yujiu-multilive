@@ -706,10 +706,10 @@ class Viewer {
   }
 
   // 礼物框开关：像评论区一样可以打开/关闭；关闭时画面与评论区扩展占满原礼物区域
-  async toggleGift(roomId) {
+  async toggleGift(roomId, forceHide = false) {
     const r = this.rooms.get(String(roomId));
     if (!r || r.view.webContents.isDestroyed()) return { giftHidden: null };
-    const hide = !r.giftHidden;
+    const hide = forceHide ? true : !r.giftHidden;
     const js = hide
       ? `(() => {
           if (!document.getElementById('__app-gift-hide')) {
@@ -744,11 +744,15 @@ class Viewer {
     return { giftHidden: r.giftHidden };
   }
 
-  // 打开直播间后默认自动隐藏礼物框（和评论区自动收起保持一致，可点 🎁 再打开）
+  // 打开直播间后默认自动隐藏礼物框（和评论区自动收起保持一致，可点 🎁 再打开）。
+  // 页面礼物栏可能晚挂载：在多个时间点补刀强制隐藏，避免只删掉内容却留下灰色背景。
   _autoHideGift(roomId) {
-    const r = this.rooms.get(String(roomId));
-    if (!r || r.giftHidden) return;
-    this.toggleGift(roomId).catch(() => {});
+    const tryHide = () => {
+      const r = this.rooms.get(String(roomId));
+      if (!r || r.view.webContents.isDestroyed()) return;
+      this.toggleGift(roomId, true).catch(() => {});
+    };
+    [400, 1500, 3000, 6000].forEach((ms) => setTimeout(tryHide, ms));
   }
 
   closeRoom(roomId) {
