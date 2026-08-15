@@ -208,6 +208,8 @@ class Viewer {
     wc.on('did-finish-load', () => {
       // 页面挂载后自动进入“网页全屏”：加类 + 页面内 MutationObserver 即时补回（无闪烁）
       [150, 1000, 3000].forEach((ms) => setTimeout(() => this._autoWebFullscreen(roomId), ms));
+      // 页面加载完成后重新按格子宽度缩放一次（避免横向裁切）
+      setTimeout(() => { try { if (this.rooms.has(roomId)) this.layout(); } catch (_) {} }, 1200);
       // 收起评论区只在房间真正打开（前台）时执行；池中的视图不渲染，测量不可靠
       if (this.rooms.has(roomId)) {
         setTimeout(() => this._autoCollapseChat(roomId), 800);
@@ -751,14 +753,43 @@ class Viewer {
     const [W, H] = this.win.getContentSize();
     if (!W || !H) return;
     const rects = computeRects(n, W, H, this.sidebarW);
-    const list = [...this.rooms.values()];
-    list.forEach((r, i) => {
+    const list = [...this.rooms.entries()];
+    list.forEach(([roomId, r], i) => {
       const b = rects[i];
       r.view.setBounds({
         x: Math.round(b.x), y: Math.round(b.y),
         width: Math.round(b.w), height: Math.round(b.h),
       });
+      this._fitZoom(r, b, roomId); // 按格子宽度自动缩放页面，避免横向裁切
     });
+  }
+
+  // B 站页面有最小布局宽度：格子比页面窄时按比例缩小 zoom，保证横向内容完整可见
+  _fitZoom(r, b, roomId) {
+    const wc = r.view.webContents;
+    if (!r.pageWidth) {
+      wc.executeJavaScript(
+        `Math.max(document.documentElement.scrollWidth || 0, document.documentElement.clientWidth || 0, 1000)`
+      ).then((pw) => {
+        r.pageWidth = Math.max(Number(pw) || 1000, 1000);
+        this._applyZoom(r, b, roomId);
+      }).catch(() => {});
+      return;
+    }
+    this._applyZoom(r, b, roomId);
+  }
+
+  _applyZoom(r, b, roomId) {
+    const pw = r.pageWidth;
+    if (!pw) return;
+    let f = b.w / pw;
+    f = Math.min(1, Math.max(0.5, f)); // 只缩小，不放大；最小 0.5 防止文字过小
+    f = Math.round(f * 100) / 100;
+    if (Math.abs(f - (r.zoomFactor || 1)) > 0.02) {
+      r.zoomFactor = f;
+      try { r.view.webContents.setZoomFactor(f); } catch (_) {}
+      log('VIEW', 'zoom', roomId, 'cell=' + Math.round(b.w), 'page=' + pw, 'factor=' + f);
+    }
   }
 
   // 屏蔽真实光标：注入操作期间，捕获阶段拦截与注入目标不符的鼠标/指针事件。
