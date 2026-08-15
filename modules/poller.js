@@ -91,32 +91,38 @@ async function fetchRoomInfo(roomId, opts = {}) {
   let code = null;
   let status = null;
 
-  // 主接口 get_info（无风控签名要求，实测稳定）
-  try {
-    const json = await doFetch(
-      `https://api.live.bilibili.com/room/v1/Room/get_info?room_id=${id}`,
-      { timeoutMs }
-    );
-    if (json && json.code === 0 && json.data) {
-      return normalize(extractMain(json.data));
+  // 主接口 get_info：刚开播时可能未就绪/风控，轮询重试直到拿到正常返回值（最多 3 次）
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const json = await doFetch(
+        `https://api.live.bilibili.com/room/v1/Room/get_info?room_id=${id}`,
+        { timeoutMs }
+      );
+      if (json && json.code === 0 && json.data) {
+        return normalize(extractMain(json.data));
+      }
+      code = json && json.code != null ? json.code : null;
+    } catch (err) {
+      status = err && err.status != null ? err.status : status;
     }
-    code = json && json.code != null ? json.code : null;
-  } catch (err) {
-    status = err && err.status != null ? err.status : status;
+    if (attempt < 3) await sleep(2000 * attempt); // 2s / 4s 后重试
   }
 
-  // 回退接口 get_info_by_room
-  try {
-    const json = await doFetch(
-      `https://api.live.bilibili.com/room/v1/Room/get_info_by_room?room_id=${id}`,
-      { timeoutMs }
-    );
-    if (json && json.code === 0 && json.data) {
-      return normalize(extractFallback(json.data));
+  // 回退接口 get_info_by_room：同样轮询重试（最多 2 次）
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const json = await doFetch(
+        `https://api.live.bilibili.com/room/v1/Room/get_info_by_room?room_id=${id}`,
+        { timeoutMs }
+      );
+      if (json && json.code === 0 && json.data) {
+        return normalize(extractFallback(json.data));
+      }
+      code = json && json.code != null ? json.code : code;
+    } catch (err) {
+      status = err && err.status != null ? err.status : status;
     }
-    code = json && json.code != null ? json.code : code;
-  } catch (err) {
-    status = err && err.status != null ? err.status : status;
+    if (attempt < 2) await sleep(2000);
   }
 
   throw new Error(`获取直播间信息失败(code=${code || 'HTTP' + status})`);
