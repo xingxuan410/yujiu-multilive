@@ -5,6 +5,7 @@ const fs = require('node:fs');
 const Store = require('./modules/store');
 const { Poller, fetchRoomInfo, fetchUname, parseRoomId } = require('./modules/poller');
 const Notifier = require('./modules/notifier');
+const { checkUpdate } = require('./modules/updater');
 const { Viewer, SIDEBAR_W } = require('./modules/viewer');
 
 // 托盘图标（16x16 粉色圆点）
@@ -178,12 +179,31 @@ if (isSmoke) {
       handle('streamer:resolve', async (input) => {
         const roomId = parseRoomId(String(input || ''));
         if (!roomId) throw new Error('无法识别直播间号，请输入直播间链接或房间号');
-        const info = await fetchRoomInfo(roomId);
-        if (info.uid != null) {
-          const uname = await fetchUname(info.uid);
-          if (uname) info.name = uname;
+        try {
+          const info = await fetchRoomInfo(roomId);
+          if (info.uid != null) {
+            const uname = await fetchUname(info.uid);
+            if (uname) info.name = uname;
+          }
+          return { info };
+        } catch (err) {
+          // 刚开播的房间 B 站接口可能暂时风控/未就绪：不要卡死添加流程，
+          // 先用房间号占位，等轮询器下一轮拿到详细信息后自动补全
+          appLog('RESOLVE', '刚开播房间解析暂失败，使用占位信息', roomId, String((err && err.message) || err));
+          return {
+            info: {
+              roomId,
+              uid: null,
+              name: '',
+              title: '',
+              cover: '',
+              areaName: '',
+              liveStatus: 1,
+              liveStartTime: null,
+              provisional: true,
+            },
+          };
         }
-        return { info };
       });
       handle('streamer:add', (p) => {
         const roomId = String(p.roomId || '').trim();
@@ -193,9 +213,6 @@ if (isSmoke) {
           name: String(p.name || '').trim() || `房间${roomId}`,
           groupId: p.groupId || null,
         });
-        // 修复尝试：新增后立即刷新开播状态并补位预热池，避免需要重启才能正常观看
-        try { if (poller) poller.pollNow(); } catch (_) {}
-        try { refillPool(); } catch (_) {}
         return { streamer };
       });
       handle('streamer:remove', (id) => { store.removeStreamer(id); return {}; });
@@ -217,11 +234,6 @@ if (isSmoke) {
       handle('room:mute', (p) => { viewer.setMute(String(p.roomId), !!p.muted); broadcastRooms(); return {}; });
       handle('room:toggle-chat', async (roomId) => {
         const r = await viewer.toggleChat(String(roomId));
-        broadcastRooms();
-        return r;
-      });
-      handle('room:toggle-gift', async (roomId) => {
-        const r = await viewer.toggleGift(String(roomId));
         broadcastRooms();
         return r;
       });
@@ -332,6 +344,12 @@ if (isSmoke) {
       poller.start();
       refillPool(); // 启动即刻预热
       setTimeout(refillPool, 5000); // 轮询首轮完成后补一轮
+      // GitHub 更新检查：启动 8 秒后检查一次，之后每小时检查一次；有新版弹窗提示
+      if (!isSmoke && !isDiag && !isTestOpen && !isTestClick && !isTestChat) {
+        const check = () => { try { checkUpdate(mainWin); } catch (_) {} };
+        setTimeout(check, 8000);
+        setInterval(check, 60 * 60 * 1000);
+      }
       if (isTestOpen) {
         // 自测模式：启动后自动打开指定直播间（等价于点击侧边栏），走真实全屏→收起评论区流程
         const rid = process.argv[process.argv.indexOf('--test-open') + 1] || '';
