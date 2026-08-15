@@ -1,7 +1,7 @@
 {
   "name": "yujiu-ultilive",
   "productName": "宇宙人的监控室",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "B站开播监测 + 右下角弹窗通知 + 同窗口多直播间自适应网格观看",
   "main": "main.js",
   "scripts": {
